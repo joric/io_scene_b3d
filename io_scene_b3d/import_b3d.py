@@ -3,6 +3,8 @@
 #2011-04-19 Glogow Poland Mariusz Szkaradek
 #Almost completely rewritten by Joric
 
+test_filepath = 'C:/Games/GnomE/media/levels/level01.b3d'
+
 try:
     import bpy
     import mathutils
@@ -546,7 +548,6 @@ def parse_nodes(nodes, level=0, parent=None):
         if 'nodes' in node.keys():
             parse_nodes(node['nodes'], level+1, ob)
 
-
 def load_b3d(filepath,
              context,
              IMPORT_CONSTRAIN_BOUNDS=10.0,
@@ -554,7 +555,10 @@ def load_b3d(filepath,
              APPLY_MATRIX=True,
              global_matrix=None):
     global plik,g,dir,ctx,data
-    print('Loading', filepath)
+    try:
+        plik = open(filepath,'rb')
+    except:
+        filepath = test_filepath
     plik = open(filepath,'rb')
     file = os.path.basename(filepath)
     dir = os.path.dirname(filepath)
@@ -586,15 +590,11 @@ def import_b3d(filepath):
     global plik,g,dir,data
     plik = open(filepath,'rb')
     b3d()
-
     import json
     print(json.dumps(data,separators=(',',':'),indent=1))
-
     parse_nodes(data['nodes'])
-
-filepath = 'C:/Games/GnomE/media/models/gnome/model.b3d'
 
 if __name__ == "__main__":
     if not blender:
-        import_b3d(filepath)
+        import_b3d(test_filepath)
 

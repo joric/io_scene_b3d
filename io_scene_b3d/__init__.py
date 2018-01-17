@@ -145,48 +145,12 @@ def menu_func_import(self, context):
     self.layout.operator(ImportB3D.bl_idname, text="Blitz3D (.b3d)")
 
 
-class DebugMacro(bpy.types.Operator):
-    bl_idname = "object.debug_macro"
-    bl_label = "b3d debug"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    from . import import_b3d
-
-    filepath = bpy.props.StringProperty(name="filepath", default=import_b3d.filepath)
-
-    def execute(self, context):
-        import sys,imp
-
-        # clear scene
-        for object_ in bpy.context.screen.scene.objects:
-            bpy.data.objects.remove(object_, True)
-
-        module = sys.modules['io_scene_b3d']
-        imp.reload(module)
-
-        import_b3d.load(self, context, filepath=self.filepath)
-
-        bpy.ops.view3d.viewnumpad(type='FRONT', align_active=True)
-        bpy.ops.view3d.view_all(use_all_regions=True, center=True)
-
-        if bpy.context.region_data.is_perspective:
-            bpy.ops.view3d.view_persportho()
-
-        return {'FINISHED'}
-
-addon_keymaps = []
-
 def register():
     bpy.utils.register_module(__name__)
 
     bpy.types.INFO_MT_file_import.append(menu_func_import)
     bpy.types.INFO_MT_file_export.append(menu_func_export)
 
-    # handle the keymap
-    wm = bpy.context.window_manager
-    km = wm.keyconfigs.addon.keymaps.new(name='Object Mode', space_type='EMPTY')
-    kmi = km.keymap_items.new(DebugMacro.bl_idname, 'D', 'PRESS', ctrl=True, shift=True)
-    addon_keymaps.append((km, kmi))
 
 def unregister():
     bpy.utils.unregister_module(__name__)
@@ -194,10 +158,6 @@ def unregister():
     bpy.types.INFO_MT_file_import.remove(menu_func_import)
     bpy.types.INFO_MT_file_export.remove(menu_func_export)
 
-    # handle the keymap
-    for km, kmi in addon_keymaps:
-        km.keymap_items.remove(kmi)
-    addon_keymaps.clear()
 
 if __name__ == "__main__":
     register()
