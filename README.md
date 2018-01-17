@@ -34,6 +34,7 @@ Maybe it's worth to convert it into euler.
 * Exported files sometimes contain animation keys that go outside the animation.
 Assimp doesn't import them so I've added an extra frame, just to be safe.
 It's better to recalculate the animation using existing keys.
+UPDATE: could not reproduce, reverted. Will double check later.
 
 ## License
 

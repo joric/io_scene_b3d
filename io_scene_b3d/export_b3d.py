@@ -1308,8 +1308,19 @@ def write_node_anim(num_frames):
     anim_buf = bytearray()
     temp_buf = bytearray()
 
+    """
+    print('num_frames:', num_frames)
+
+    # TODO: assimp import sometimes fails if animation is shorter than keys
+    max_frame = 0
+    for key in keys_stack:
+       max_frame = max(max_frame, key[0])
+
+    print('max_frame:', max_frame)
+    """
+
     temp_buf += write_int(0) #Flags
-    temp_buf += write_int(num_frames+1) #Frames //NB! by Joric. assimp fails if animation is shorter than keys
+    temp_buf += write_int(num_frames) #Frames
     temp_buf += write_float(60) #FPS
 
     if len(temp_buf) > 0:
