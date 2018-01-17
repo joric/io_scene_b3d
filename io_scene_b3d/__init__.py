@@ -150,11 +150,11 @@ class DebugMacro(bpy.types.Operator):
     bl_label = "b3d debug"
     bl_options = {'REGISTER', 'UNDO'}
 
-    filepath = bpy.props.StringProperty(name="filepath",
-        default='D:\\Projects\\github\\b3d_import\\io_scene_b3d\\flag.b3d')
+    from . import import_b3d
+
+    filepath = bpy.props.StringProperty(name="filepath", default=import_b3d.filepath)
 
     def execute(self, context):
-        from . import import_b3d
         import sys,imp
 
         # clear scene

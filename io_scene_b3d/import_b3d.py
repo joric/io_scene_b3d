@@ -594,11 +594,7 @@ def import_b3d(filepath):
 
 if __name__ == "__main__":
     if not blender:
-        #import_b3d('attack.b3d')
-        #import_b3d('model.b3d')
-        #import_b3d('untitled.b3d')
-        import_b3d('../archive/ded.b3d')
-        #import_b3d('bumerang.b3d')
-        #import_b3d('../archive/jumper.b3d')
-        #import_b3d('flag.b3d')
+        import_b3d(filepath)
+
+filepath = 'C:/Games/GnomE/media/models/gnome/model.b3d'
 
