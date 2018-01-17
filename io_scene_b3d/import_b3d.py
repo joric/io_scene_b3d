@@ -592,9 +592,9 @@ def import_b3d(filepath):
 
     parse_nodes(data['nodes'])
 
+filepath = 'C:/Games/GnomE/media/models/gnome/model.b3d'
+
 if __name__ == "__main__":
     if not blender:
         import_b3d(filepath)
-
-filepath = 'C:/Games/GnomE/media/models/gnome/model.b3d'
 
