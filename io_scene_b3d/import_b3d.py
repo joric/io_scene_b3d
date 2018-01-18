@@ -485,7 +485,7 @@ def import_node(node, parent):
 
     for v,n,rgba,tex_coords in node['vertices']:
         verts.append(flip(v))
-        normals.append(flip(n))
+        if n: normals.append(flip(n))
 
     for m in node['meshes']:
         for i in m['indices']:
