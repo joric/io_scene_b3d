@@ -484,28 +484,8 @@ def import_node(node, parent):
         for i in m['indices']:
             faces_indices.append(i)
 
-    """
-    mesh.vertexUV = 1
-    for m in range(len(mesh.verts)):
-        mesh.verts[m].uvco = Vector(uvcoord[m])
-    mesh.update() 
-    mesh.faceUV = 1
-    for fc in mesh.faces: fc.uv = [v.uvco for v in fc.verts];fc.smooth = 1
-    mesh.update()    
-    """
-
     mesh = bpy.data.meshes.new(objName)
     mesh.from_pydata(verts, [], faces_indices)
-
-    uv_tex = mesh.uv_textures.new(name=objName)
-    uv_lay = mesh.uv_layers[-1]
-    blen_data = uv_lay.data
-    print('len', len(blen_data), 'vs', len(verts))
-#
-#            blen_uvs = me.uv_layers[0]
-#            for face_uvidx, lidx in zip(face_vert_tex_indices, blen_poly.loop_indices):
-#                blen_uvs.data[lidx].uv = verts_tex[0 if (face_uvidx is ...) else face_uvidx]
-#    blen_uvs = mesh.uv_layers[0]
 
     ob = bpy.data.objects.new(objName, mesh)
 
@@ -522,6 +502,11 @@ def import_node(node, parent):
     ob.rotation_quaternion = flip(rot)
     ob.scale = flip(scale)
     ob.location = flip(pos)
+
+    # import uv coordinates
+    ob.data.uv_textures.new()
+    vert_uvs = [(0,0) if len(uv)==0 else (uv[0],1-uv[1]) for v,n,rgba,uv in node['vertices']]
+    ob.data.uv_layers[-1].data.foreach_set("uv", [uv for pair in [vert_uvs[l.vertex_index] for l in ob.data.loops] for uv in pair])
 
     ctx.scene.objects.link(ob)
 
