@@ -22,10 +22,8 @@ I've also implemented a debug shortcut `Shift+Ctrl+d`, that reset scene, reloads
 ### Import
 
 * Mind that UV mapping, normals and animation are not yet implemented. Working on it!
-
 * Nodes with multiple meshes get converted into a single mesh (preserving brush_id).
 Maybe it's better to split those nodes into separate objects.
-
 * Nodes use original quaternion rotation and it affects user interface.
 Maybe it's worth to convert it into euler.
 
@@ -53,7 +51,6 @@ but it was hard to find, so I just put it here in the repository as well.
 ## Alternatives
 
 * [Assimp](http://assimp.sourceforge.net/) - doesn't read .b3d animation in most cases, maybe I have acuired a very particular set of files
-
 * [fragMOTION](http://www.fragmosoft.com/) - works fine most of the time, but it's a terrible nagware and the only suitable export is .smd
 
 ## References
