@@ -50,7 +50,7 @@ but it was hard to find, so I just put it here in the repository as well.
 
 ## Alternatives
 
-* [Assimp](http://assimp.sourceforge.net/) - doesn't read .b3d animation in most cases, maybe I have acuired a very particular set of files
+* [Assimp](http://assimp.sourceforge.net/) - doesn't read .b3d animation in most cases, maybe I have acquired a very particular set of files
 * [fragMOTION](http://www.fragmosoft.com/) - works fine most of the time, but it's a terrible nagware and the only suitable export is .smd
 
 ## References
