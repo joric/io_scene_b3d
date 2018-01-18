@@ -6,16 +6,19 @@
 try:
     import bpy
     import mathutils
+    from bpy_extras.image_utils import load_image
     blender = True
 except:
     blender = False
 
-debug = True
+debug = False
 
 def indent(level):
      print(' '*level, end='')
 
 data = {'nodes':[],'version':0,'brushes':[],'textures':[]}
+
+images = {}
 
 import struct, os
 from struct import *
@@ -476,6 +479,7 @@ def import_node(node, parent):
     coords = {}
     index_tot = 0
     faces_indices = []
+    faces = []
 
     for v,n,rgba,tex_coords in node['vertices']:
         verts.append(flip(v))
@@ -483,6 +487,7 @@ def import_node(node, parent):
     for m in node['meshes']:
         for i in m['indices']:
             faces_indices.append(i)
+            faces.append(m['brush_id'])
 
     mesh = bpy.data.meshes.new(objName)
     mesh.from_pydata(verts, [], faces_indices)
@@ -504,9 +509,13 @@ def import_node(node, parent):
     ob.location = flip(pos)
 
     # import uv coordinates
-    ob.data.uv_textures.new()
     vert_uvs = [(0,0) if len(uv)==0 else (uv[0],1-uv[1]) for v,n,rgba,uv in node['vertices']]
-    ob.data.uv_layers[-1].data.foreach_set("uv", [uv for pair in [vert_uvs[l.vertex_index] for l in ob.data.loops] for uv in pair])
+    me = ob.data
+    me.uv_textures.new()
+    me.uv_layers[-1].data.foreach_set("uv", [uv for pair in [vert_uvs[l.vertex_index] for l in me.loops] for uv in pair])
+
+    # assign images
+    # for i in faces: me.uv_textures[0].data[i].image = images[i]
 
     ctx.scene.objects.link(ob)
 
@@ -538,7 +547,7 @@ def load_b3d(filepath,
              IMAGE_SEARCH=True,
              APPLY_MATRIX=True,
              global_matrix=None):
-    global plik,g,dir,ctx,data
+    global plik,g,dir,ctx,data,images
     print('Loading', filepath)
     plik = open(filepath,'rb')
     file = os.path.basename(filepath)
@@ -546,6 +555,14 @@ def load_b3d(filepath,
     g = os.listdir(dir)
     b3d()
     ctx = context
+
+    for i, texture in enumerate(data['textures']):
+        texture_name = os.path.basename(texture['name'])
+        for brush in data['brushes']:
+            if brush['texture_ids'][0]==i:
+                images[i] = load_image(texture_name, dir, check_existing=True,
+                    place_holder=False, recursive=IMAGE_SEARCH)
+
     parse_nodes(data['nodes'])
 
 def load(operator,

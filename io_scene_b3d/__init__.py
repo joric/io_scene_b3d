@@ -184,6 +184,7 @@ def register():
 
     # handle the keymap
     wm = bpy.context.window_manager
+
     km = wm.keyconfigs.addon.keymaps.new(name='Object Mode', space_type='EMPTY')
     kmi = km.keymap_items.new(DebugMacro.bl_idname, 'D', 'PRESS', ctrl=True, shift=True)
     addon_keymaps.append((km, kmi))
