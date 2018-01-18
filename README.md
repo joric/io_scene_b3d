@@ -21,7 +21,7 @@ I've also implemented a debug shortcut `Shift+Ctrl+d`, that reset scene, reloads
 
 ### Import
 
-* Mind that UV mapping, normals and animation are not yet implemented. Working on it!
+* Mind that animation is not yet implemented. Working on it!
 * Nodes with multiple meshes get converted into a single mesh (preserving brush_id).
 Maybe it's better to split those nodes into separate objects.
 * Nodes use original quaternion rotation and it affects user interface.
