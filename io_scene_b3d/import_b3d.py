@@ -7,6 +7,7 @@ try:
     import bpy
     import mathutils
     from bpy_extras.image_utils import load_image
+    from bpy_extras.io_utils import unpack_list, unpack_face_list
     blender = True
 except:
     blender = False
@@ -480,21 +481,34 @@ def import_node(node, parent):
     index_tot = 0
     faces_indices = []
     faces = []
+    normals = []
 
     for v,n,rgba,tex_coords in node['vertices']:
         verts.append(flip(v))
+        normals.append(flip(n))
 
     for m in node['meshes']:
         for i in m['indices']:
-            faces_indices.append(i)
+            faces_indices.append(flip(i))
             faces.append(m['brush_id'])
 
     mesh = bpy.data.meshes.new(objName)
     mesh.from_pydata(verts, [], faces_indices)
 
-    ob = bpy.data.objects.new(objName, mesh)
+    # set normals
+    mesh.vertices.foreach_set('normal', unpack_list(normals))
 
-    #mesh.calc_normals() # does not work
+    """
+    if len(mesh.polygons): print('poly normal before', mesh.polygons[0].normal)
+    mesh.validate()
+    mesh.update()
+    mesh.calc_normals() # does not work
+    #mesh.calc_normals_split()
+    #mesh.update(calc_edges=True)
+    if len(mesh.polygons): print('poly normal after', mesh.polygons[0].normal)
+    """
+
+    ob = bpy.data.objects.new(objName, mesh)
 
     if parent:
         ob.parent = parent
@@ -518,6 +532,41 @@ def import_node(node, parent):
     # for i in faces: me.uv_textures[0].data[i].image = images[i]
 
     ctx.scene.objects.link(ob)
+
+    """
+    # dump vertices
+    me = ob.data
+    uv_layer = me.uv_layers.active.data
+    for poly in me.polygons:
+        print("Polygon index: %d, length: %d" % (poly.index, poly.loop_total))
+
+        # range is used here to show how the polygons reference loops,
+        # for convenience 'poly.loop_indices' can be used instead.
+        for loop_index in range(poly.loop_start, poly.loop_start + poly.loop_total):
+            print("    Vertex: %d" % me.loops[loop_index].vertex_index)
+            print("    UV: %r" % uv_layer[loop_index].uv)
+    """
+
+    if len(node['meshes']):
+
+        ops = bpy.ops
+        md = mesh
+
+        bpy.context.scene.objects.active = ob
+
+        # remove doubles!
+        ops.object.mode_set(mode='EDIT')
+        ops.mesh.remove_doubles(threshold=0)
+        ops.mesh.select_all(action='INVERT')
+        ops.mesh.remove_doubles(threshold=0)
+        ops.mesh.select_all(action='DESELECT')
+        ops.object.mode_set(mode='OBJECT')
+
+        # smooth normals!
+        md.use_auto_smooth = True
+        md.auto_smooth_angle = 3.145926*0.2
+        ops.object.select_all(action="SELECT")
+        ops.object.shade_smooth()
 
     return ob
 
