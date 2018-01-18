@@ -50,3 +50,13 @@ from supertuxcart project by Diego 'GaNDaLDF' Parisi. Since it's all GPL-license
 The b3d format documentation (b3dfile_specs.txt) doesn't have a clear license (I assume Public Domain)
 but it was hard to find, so I just put it here in the repository as well.
 
+## Alternatives
+
+* [Assimp](http://assimp.sourceforge.net/) - doesn't read .b3d animation in most cases, maybe I have acuired a very particular set of files
+
+* [fragMOTION](http://www.fragmosoft.com/) - works fine most of the time, but it's a terrible nagware and the only suitable export is .smd
+
+## References
+
+* https://github.com/joric/gnome
+
