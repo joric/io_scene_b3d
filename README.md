@@ -13,7 +13,8 @@ The add-on zip file should contain io_scene_b3d directory, including the directo
 ## Debugging
 
 * Userspace method: every time you make a change the script has to be reloaded using Reload Scripts command (F8).
-* Alternative method: use my debug shortcut, Shift+Ctrl+D. It resets scene, reloads the script and imports a test file.
+* Alternative method: my shortcut, Shift+Ctrl+D in Object Mode. It resets scene, reloads the script and imports test file.
+* Somewhat more alternative method (Windows only), my autohotkey script (see the [autohotkey](https://github.com/joric/io_scene_b3d/tree/autohotkey) branch).
 
 ## TODO
 
@@ -22,15 +23,17 @@ The add-on zip file should contain io_scene_b3d directory, including the directo
 * Mind that animation is not yet implemented. Working on it!
 * Nodes use original quaternion rotation that affects user interface.
 Maybe convert them into euler angles.
-* Sometimes there are files with objects that were joined together in a single mesh (see raw json data).
-I'm effectively splitting objects with multiple meshes into separate objects (better than
-assigning different materials to individual faces) but I can't split large meshes that use the same material.
+* Sometimes b3d files contain objects that were joined together in a single mesh
+(that's not my fault, see raw json data).
+I'm splitting objects with multiple meshes into separate objects
+(better than assigning different materials to individual faces)
+but I can't effectively split large meshes that use the same material.
 Maybe try proixmity-based clasterisation.
 
 ### Export
 
-* Exported files sometimes contain animation keys that go outside the animation.
-Assimp doesn't import them so I've added an extra frame, just to be safe.
+* Exported files (script by Diego 'GaNDaLDF' Parisi) sometimes contain animation keys
+that go outside the animation. Assimp doesn't import them so I've added an extra frame, just to be safe.
 It's better to recalculate the animation using existing keys.
 UPDATE: could not reproduce, reverted. Will double check later.
 
