@@ -395,7 +395,7 @@ def parse_node(next, level=0):
             while plik.tell()<nextv:
                 v = f(3)
                 n = f(3) if flags&1 else []
-                rgba = f[4] if flags&2 else []
+                rgba = f(4) if flags&2 else []
                 tex_coords = f(tcs*tcss)
                 vertices.append((v,n,rgba,tex_coords))
 
