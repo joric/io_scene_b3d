@@ -487,14 +487,6 @@ def import_node(node, parent):
 
     objects = []
 
-    if node['meshes']==[]:
-        mesh = bpy.data.meshes.new(objName)
-        ob = bpy.data.objects.new(objName, mesh)
-        objects.append(ob)
-        if parent: ob.parent = parent
-        ctx.scene.objects.link(ob)
-        root = ob
-
     # walk through faces and collect vertices
     for m in node['meshes']:
         objIndex += 1
@@ -574,6 +566,13 @@ def import_node(node, parent):
             mesh.auto_smooth_angle = 3.145926*0.2
             ops.object.select_all(action="SELECT")
             ops.object.shade_smooth()
+
+    if not objects:
+        ob = bpy.data.objects.new(objName, None)
+        objects.append(ob)
+        if parent: ob.parent = parent
+        ctx.scene.objects.link(ob)
+        root = ob
 
     for ob in objects:
         ob.rotation_mode='QUATERNION'
