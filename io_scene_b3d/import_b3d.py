@@ -650,7 +650,6 @@ def load_b3d(filepath,
         material = bpy.data.materials.new(name)
         material.diffuse_color = brush['rgba'][:-1]
         material.alpha = brush['rgba'][3]
-        material.alpha = max(material.alpha, 0.001) # unity
         material.use_transparency = material.alpha < 1
         texture = bpy.data.textures.new(name=name, type='IMAGE')
         tid = brush['texture_ids'][0]
