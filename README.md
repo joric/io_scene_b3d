@@ -20,8 +20,12 @@ The add-on zip file should contain io_scene_b3d directory, including the directo
 ### Import
 
 * Mind that animation is not yet implemented. Working on it!
-* Nodes use original quaternion rotation and it affects user interface.
-Maybe it's worth to convert it into euler.
+* Nodes use original quaternion rotation that affects user interface.
+Maybe convert them into euler angles.
+* Sometimes there are files with objects that were joined together in a single mesh (see raw json data).
+I'm effectively splitting objects with multiple meshes into separate objects (better than
+assigning different materials to individual faces) but I can't split large meshes that use the same material.
+Maybe try proixmity-based clasterisation.
 
 ### Export
 
