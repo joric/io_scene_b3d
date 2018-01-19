@@ -8,7 +8,7 @@ Blender Import-Export script for Blitz 3D .b3d files
 The add-on zip file should contain io_scene_b3d directory, including the directory itself.
 * Alternative method: copy or symlink the io_scene_b3d directory to blender user directory, e.g. to
 %APPDATA%\Blender Foundation\Blender\2.79\scripts\addons\io_scene_b3d
-* Search and enable add-on in "User Preferences" - "Add-ons". Don't forget to click "Save User Settings" afterwards.
+* Search and enable add-on in "User Preferences" - "Add-ons". Ñlick "Save User Settings" afterwards.
 
 ## Debugging
 
@@ -28,7 +28,9 @@ Maybe convert them into euler angles.
 I'm splitting objects with multiple meshes into separate objects
 (better than assigning different materials to individual faces)
 but I can't effectively split large meshes that use the same material.
-Maybe try proixmity-based clasterisation.
+Maybe try proixmity-based clasterisation. Converting those meshes into
+a set of instances is even more complex, considering that differently
+scaled and rotated objects also can overlap.
 
 ### Export
 
