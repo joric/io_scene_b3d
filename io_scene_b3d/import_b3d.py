@@ -535,8 +535,9 @@ def import_node(node, parent):
     ops = bpy.ops
     bpy.context.scene.objects.active = ob
 
-    # assign images ? doesn't work
-    # for i in facemat: me.uv_textures[0].data[i].image = images[i]
+#    for i in facemats:
+#        if i in images.keys() and i<len(me.uv_textures[0].data):
+#            me.uv_textures[0].data[i].image = images[i]
 
     # assign materials
     mat_id = facemats[0] if len(facemats) else -1
@@ -546,6 +547,11 @@ def import_node(node, parent):
             ob.data.materials[0] = mat
         else:
             ob.data.materials.append(mat)
+
+        # assign uv images
+        for uv_face in ob.data.uv_textures.active.data:
+            if mat.active_texture:
+                uv_face.image = mat.active_texture.image
 
     """
     bpy.ops.object.mode_set(mode = 'EDIT')          # Go to edit mode to create bmesh
@@ -644,6 +650,7 @@ def load_b3d(filepath,
         material = bpy.data.materials.new(name)
         material.diffuse_color = brush['rgba'][:-1]
         material.alpha = brush['rgba'][3]
+        material.alpha = max(material.alpha, 0.001) # unity
         material.use_transparency = material.alpha < 1
         texture = bpy.data.textures.new(name=name, type='IMAGE')
         tid = brush['texture_ids'][0]
