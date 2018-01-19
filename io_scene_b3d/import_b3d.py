@@ -8,11 +8,13 @@ try:
     import mathutils
     from bpy_extras.image_utils import load_image
     from bpy_extras.io_utils import unpack_list, unpack_face_list
+    import bmesh
     blender = True
 except:
     blender = False
 
 debug = False
+postprocess = True
 
 def indent(level):
      print(' '*level, end='')
@@ -20,6 +22,7 @@ def indent(level):
 data = {'nodes':[],'version':0,'brushes':[],'textures':[]}
 
 images = {}
+materials = {}
 
 import struct, os
 from struct import *
@@ -480,7 +483,7 @@ def import_node(node, parent):
     coords = {}
     index_tot = 0
     faces_indices = []
-    faces = []
+    facemats = []
     normals = []
 
     for v,n,rgba,tex_coords in node['vertices']:
@@ -490,7 +493,7 @@ def import_node(node, parent):
     for m in node['meshes']:
         for i in m['indices']:
             faces_indices.append(flip(i))
-            faces.append(m['brush_id'])
+            facemats.append(m['brush_id'])
 
     mesh = bpy.data.meshes.new(objName)
     mesh.from_pydata(verts, [], faces_indices)
@@ -528,10 +531,35 @@ def import_node(node, parent):
     me.uv_textures.new()
     me.uv_layers[-1].data.foreach_set("uv", [uv for pair in [vert_uvs[l.vertex_index] for l in me.loops] for uv in pair])
 
-    # assign images
-    # for i in faces: me.uv_textures[0].data[i].image = images[i]
-
     ctx.scene.objects.link(ob)
+    ops = bpy.ops
+    bpy.context.scene.objects.active = ob
+
+    # assign images ? doesn't work
+    # for i in facemat: me.uv_textures[0].data[i].image = images[i]
+
+    # assign materials
+    mat_id = facemats[0] if len(facemats) else -1
+    if mat_id in materials.keys():
+        mat = materials[mat_id]
+        if ob.data.materials:
+            ob.data.materials[0] = mat
+        else:
+            ob.data.materials.append(mat)
+
+    """
+    bpy.ops.object.mode_set(mode = 'EDIT')          # Go to edit mode to create bmesh
+    ob = bpy.context.object                         # Reference to selected object
+
+    bm = bmesh.from_edit_mesh(ob.data)              # Create bmesh object from object mesh
+
+    for i, face in enumerate(bm.facemats):        # Iterate over all of the object's faces
+        face.material_index = 0
+
+    ob.data.update()                            # Update the mesh from the bmesh data
+    bpy.ops.object.mode_set(mode = 'OBJECT')    # Return to object mode</pre>
+    """
+
 
     """
     # dump vertices
@@ -547,24 +575,21 @@ def import_node(node, parent):
             print("    UV: %r" % uv_layer[loop_index].uv)
     """
 
-    if len(node['meshes']):
+    if len(node['meshes']) and postprocess:
 
-        ops = bpy.ops
-        md = mesh
-
-        bpy.context.scene.objects.active = ob
-
-        # remove doubles!
         ops.object.mode_set(mode='EDIT')
+        ops.mesh.select_all(action='SELECT')
+
         ops.mesh.remove_doubles(threshold=0)
-        ops.mesh.select_all(action='INVERT')
-        ops.mesh.remove_doubles(threshold=0)
+        #bpy.ops.mesh.tris_convert_to_quads()
+
         ops.mesh.select_all(action='DESELECT')
         ops.object.mode_set(mode='OBJECT')
 
-        # smooth normals!
-        md.use_auto_smooth = True
-        md.auto_smooth_angle = 3.145926*0.2
+
+        # smooth normals
+        mesh.use_auto_smooth = True
+        mesh.auto_smooth_angle = 3.145926*0.2
         ops.object.select_all(action="SELECT")
         ops.object.shade_smooth()
 
@@ -596,7 +621,7 @@ def load_b3d(filepath,
              IMAGE_SEARCH=True,
              APPLY_MATRIX=True,
              global_matrix=None):
-    global plik,g,dir,ctx,data,images
+    global plik,g,dir,ctx,data,images,materials
     print('Loading', filepath)
     plik = open(filepath,'rb')
     file = os.path.basename(filepath)
@@ -605,12 +630,30 @@ def load_b3d(filepath,
     b3d()
     ctx = context
 
+    # load images
     for i, texture in enumerate(data['textures']):
         texture_name = os.path.basename(texture['name'])
         for brush in data['brushes']:
             if brush['texture_ids'][0]==i:
                 images[i] = load_image(texture_name, dir, check_existing=True,
                     place_holder=False, recursive=IMAGE_SEARCH)
+
+    # create materials
+    for i, brush in enumerate(data['brushes']):
+        name = brush['name']
+        material = bpy.data.materials.new(name)
+        material.diffuse_color = brush['rgba'][:-1]
+        material.alpha = brush['rgba'][3]
+        material.use_transparency = material.alpha==0
+        texture = bpy.data.textures.new(name=name, type='IMAGE')
+        tid = brush['texture_ids'][0]
+        if tid in images.keys():
+            texture.image = images[tid]
+            mtex = material.texture_slots.add()
+            mtex.texture = texture
+            mtex.texture_coords = 'UV'
+            mtex.use_map_color_diffuse = True
+        materials[i] = material
 
     parse_nodes(data['nodes'])
 
@@ -643,7 +686,8 @@ def import_b3d(filepath):
 
     parse_nodes(data['nodes'])
 
-filepath = 'C:/Games/GnomE/media/models/gnome/model.b3d'
+#filepath = 'C:/Games/GnomE/media/models/gnome/model.b3d'
+filepath = 'C:/Games/GnomE/media/levels/level1.b3d'
 
 if __name__ == "__main__":
     if not blender:
