@@ -5,7 +5,7 @@ Blender Import-Export script for Blitz 3D .b3d files
 ## Installation
 
 * Userspace method: click "File" - "User Preferences" - "Add-ons" - "Install Add-on from File".
-The add-on zip file should contain io_scene_b3d directory. 
+The add-on zip file should contain io_scene_b3d directory, including the directory itself.
 * Alternative method: copy or symlink the io_scene_b3d directory to blender user directory, e.g. to
 %APPDATA%\Blender Foundation\Blender\2.79\scripts\addons\io_scene_b3d
 * Search and enable add-on in "User Preferences" - "Add-ons". Don't forget to click "Save User Settings" afterwards.
