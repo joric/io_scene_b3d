@@ -478,128 +478,111 @@ def flip(v):
 def import_node(node, parent):
 
     objName = node['name']
-
-    verts = []
-    coords = {}
-    index_tot = 0
-    faces_indices = []
-    facemats = []
-    normals = []
-
-    for v,n,rgba,tex_coords in node['vertices']:
-        verts.append(flip(v))
-        if n: normals.append(flip(n))
-
-    for m in node['meshes']:
-        for i in m['indices']:
-            faces_indices.append(flip(i))
-            facemats.append(m['brush_id'])
-
-    mesh = bpy.data.meshes.new(objName)
-    mesh.from_pydata(verts, [], faces_indices)
-
-    # set normals
-    mesh.vertices.foreach_set('normal', unpack_list(normals))
-
-    """
-    if len(mesh.polygons): print('poly normal before', mesh.polygons[0].normal)
-    mesh.validate()
-    mesh.update()
-    mesh.calc_normals() # does not work
-    #mesh.calc_normals_split()
-    #mesh.update(calc_edges=True)
-    if len(mesh.polygons): print('poly normal after', mesh.polygons[0].normal)
-    """
-
-    ob = bpy.data.objects.new(objName, mesh)
-
-    if parent:
-        ob.parent = parent
+    objIndex = -1
+    root = None
 
     pos = node['position']
     rot = node['rotation']
     scale = node['scale']
 
-    ob.rotation_mode='QUATERNION'
-    ob.rotation_quaternion = flip(rot)
-    ob.scale = flip(scale)
-    ob.location = flip(pos)
+    objects = []
 
-    # import uv coordinates
-    vert_uvs = [(0,0) if len(uv)==0 else (uv[0],1-uv[1]) for v,n,rgba,uv in node['vertices']]
-    me = ob.data
-    me.uv_textures.new()
-    me.uv_layers[-1].data.foreach_set("uv", [uv for pair in [vert_uvs[l.vertex_index] for l in me.loops] for uv in pair])
+    if node['meshes']==[]:
+        mesh = bpy.data.meshes.new(objName)
+        ob = bpy.data.objects.new(objName, mesh)
+        objects.append(ob)
+        if parent: ob.parent = parent
+        ctx.scene.objects.link(ob)
+        root = ob
 
-    ctx.scene.objects.link(ob)
-    ops = bpy.ops
-    bpy.context.scene.objects.active = ob
+    # walk through faces and collect vertices
+    for m in node['meshes']:
+        objIndex += 1
+        if objIndex>0:
+            objName = "%s.%03d" % (node['name'], objIndex)
 
-#    for i in facemats:
-#        if i in images.keys() and i<len(me.uv_textures[0].data):
-#            me.uv_textures[0].data[i].image = images[i]
+        vertices = []
+        faces = []
+        normals = []
+        uvs = []
+        brush_id = m['brush_id']
 
-    # assign materials
-    mat_id = facemats[0] if len(facemats) else -1
-    if mat_id in materials.keys():
-        mat = materials[mat_id]
-        if ob.data.materials:
-            ob.data.materials[0] = mat
-        else:
-            ob.data.materials.append(mat)
+        remap = {}
+
+        for face in m['indices']:
+            face0 = []
+            for idx in flip(face):
+                v,n,rgba,uv = node['vertices'][idx]
+                if idx not in remap:
+                    vertices.append(flip(v))
+                    uvs.append(uv)
+                    normals.append(n)
+                    remap[idx] = len(vertices)-1
+                face0.append(remap[idx])
+            faces.append(face0)
+
+        mesh = bpy.data.meshes.new(objName)
+        mesh.from_pydata(vertices, [], faces)
+        ob = bpy.data.objects.new(objName, mesh)
+        objects.append(ob)
+
+        if parent: ob.parent = parent
+
+        if objIndex==0: parent = ob
+
+        # assign normals
+        if len(normals):
+            mesh.vertices.foreach_set('normal', unpack_list(normals))
+
+        # import uv coordinates
+        vert_uvs = [(0,0) if len(uv)==0 else (uv[0],1-uv[1]) for uv in uvs]
+        me = ob.data
+        me.uv_textures.new()
+        me.uv_layers[-1].data.foreach_set("uv", [uv for pair in [vert_uvs[l.vertex_index] for l in me.loops] for uv in pair])
+
+        ctx.scene.objects.link(ob)
+
+        ops = bpy.ops
+        bpy.context.scene.objects.active = ob
+
+        # assign materials
+        if brush_id in materials.keys():
+            mat = materials[brush_id]
+            if ob.data.materials:
+                ob.data.materials[0] = mat
+            else:
+                ob.data.materials.append(mat)
 
         # assign uv images
         for uv_face in ob.data.uv_textures.active.data:
             if mat.active_texture:
                 uv_face.image = mat.active_texture.image
 
-    """
-    bpy.ops.object.mode_set(mode = 'EDIT')          # Go to edit mode to create bmesh
-    ob = bpy.context.object                         # Reference to selected object
+        if len(node['meshes']) and postprocess:
 
-    bm = bmesh.from_edit_mesh(ob.data)              # Create bmesh object from object mesh
+            ops.object.mode_set(mode='EDIT')
+            ops.mesh.select_all(action='SELECT')
 
-    for i, face in enumerate(bm.facemats):        # Iterate over all of the object's faces
-        face.material_index = 0
+            ops.mesh.remove_doubles(threshold=0)
+            #bpy.ops.mesh.tris_convert_to_quads()
 
-    ob.data.update()                            # Update the mesh from the bmesh data
-    bpy.ops.object.mode_set(mode = 'OBJECT')    # Return to object mode</pre>
-    """
+            ops.mesh.select_all(action='DESELECT')
+            ops.object.mode_set(mode='OBJECT')
 
+            # smooth normals
+            mesh.use_auto_smooth = True
+            mesh.auto_smooth_angle = 3.145926*0.2
+            ops.object.select_all(action="SELECT")
+            ops.object.shade_smooth()
 
-    """
-    # dump vertices
-    me = ob.data
-    uv_layer = me.uv_layers.active.data
-    for poly in me.polygons:
-        print("Polygon index: %d, length: %d" % (poly.index, poly.loop_total))
+    for ob in objects:
+        ob.rotation_mode='QUATERNION'
+        ob.rotation_quaternion = flip(rot)
+        ob.scale = flip(scale)
+        ob.location = flip(pos)
+        break # rotate first (parent) only
 
-        # range is used here to show how the polygons reference loops,
-        # for convenience 'poly.loop_indices' can be used instead.
-        for loop_index in range(poly.loop_start, poly.loop_start + poly.loop_total):
-            print("    Vertex: %d" % me.loops[loop_index].vertex_index)
-            print("    UV: %r" % uv_layer[loop_index].uv)
-    """
-
-    if len(node['meshes']) and postprocess:
-
-        ops.object.mode_set(mode='EDIT')
-        ops.mesh.select_all(action='SELECT')
-
-        ops.mesh.remove_doubles(threshold=0)
-        #bpy.ops.mesh.tris_convert_to_quads()
-
-        ops.mesh.select_all(action='DESELECT')
-        ops.object.mode_set(mode='OBJECT')
-
-
-        # smooth normals
-        mesh.use_auto_smooth = True
-        mesh.auto_smooth_angle = 3.145926*0.2
-        ops.object.select_all(action="SELECT")
-        ops.object.shade_smooth()
-
-    return ob
+    return root
 
 def parse_nodes(nodes, level=0, parent=None):
     for node in nodes:
