@@ -545,10 +545,10 @@ def import_node(node, parent):
             else:
                 ob.data.materials.append(mat)
 
-        # assign uv images
-        for uv_face in ob.data.uv_textures.active.data:
-            if mat.active_texture:
-                uv_face.image = mat.active_texture.image
+            # assign uv images
+            for uv_face in ob.data.uv_textures.active.data:
+                if mat.active_texture:
+                    uv_face.image = mat.active_texture.image
 
         if len(node['meshes']) and postprocess:
 
