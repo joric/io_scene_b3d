@@ -4,18 +4,15 @@ Blender Import-Export script for Blitz 3D .b3d files
 
 ## Installation
 
-The preferred method to install scripts is `File - User preferences - Add-ons - Install Add-on from File`.
-Use archived addon (zip archive containing io_scene_b3d directory), and press 
-`Save User Settings` button afterwards.
-
-You can also copy or symlink the io_scene_b3d directory to the Blender user directory, i.e.:
-`%APPDATA%\Blender Foundation\Blender\2.79\scripts\addons\io_scene_b3d`.
+* Userspace method: click File - User Preferences - Add-ons - Install Add-on from File.
+The add-on zip file should contain io_scene_b3d directory. Don't forget to click Save User Settings afterwards.
+* Alternative method: copy or symlink the io_scene_b3d directory to blender user directory, e.g. to
+%APPDATA%\Blender Foundation\Blender\2.79\scripts\addons\io_scene_b3d.
 
 ## Debugging
 
-Every time you change the script it has to be reloaded with `Reload Scripts` (space bar menu or simply press `F8`).
-
-I've also implemented a debug shortcut `Shift+Ctrl+d`, that reset scene, reloads script and then imports a test file.
+* Userspace method: every time you make a change the script has to be reloaded using Reload Scripts command (F8).
+* Alternative method: use my debug shortcut, Shift+Ctrl+D. It resets scene, reloads the script and imports a test file.
 
 ## TODO
 
