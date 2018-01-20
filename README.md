@@ -24,8 +24,8 @@ The add-on zip file should contain io_scene_b3d directory, including the directo
 * Nodes use original quaternion rotation that affects user interface.
 Maybe convert them into euler angles.
 * Sometimes objects appear joined together in a single mesh (an attempt on hardware instancing, I guess).
-I'm splitting objects with multiple meshes into a separate objects but I can't effectively
-split large meshes into separate objects. Probably solvable with point cloud matching
+I'm splitting objects with multiple meshes into separate objects but I can't effectively
+split large pre-baked mashes. Probably solvable with point cloud matching
 (considering that objects also can overlap).
 
 ### Export
