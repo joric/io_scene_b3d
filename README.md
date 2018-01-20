@@ -7,14 +7,14 @@ Blender Import-Export script for Blitz 3D .b3d files
 * Userspace method: click "File" - "User Preferences" - "Add-ons" - "Install Add-on from File".
 The add-on zip file should contain io_scene_b3d directory, including the directory itself.
 * Alternative method: copy or symlink the io_scene_b3d directory to blender user directory, e.g. to
-%APPDATA%\Blender Foundation\Blender\2.79\scripts\addons\io_scene_b3d
+%APPDATA%\Blender Foundation\Blender\2.79\scripts\addons\io_scene_b3d.
 * Search and enable add-on in "User Preferences" - "Add-ons". Click "Save User Settings" afterwards.
 
 ## Debugging
 
 * Userspace method: every time you make a change the script has to be reloaded using Reload Scripts command (F8).
 * Alternative method: my shortcut, Shift+Ctrl+D in Object Mode. It resets scene, reloads the script and imports test file.
-* Somewhat more alternative method (Windows only), my autohotkey script (see the [autohotkey](https://github.com/joric/io_scene_b3d/tree/autohotkey) branch).
+* Somewhat simpler method (Windows only), an autohotkey script I wrote (see the [autohotkey](https://github.com/joric/io_scene_b3d/tree/autohotkey) branch).
 
 ## TODO
 
@@ -23,14 +23,10 @@ The add-on zip file should contain io_scene_b3d directory, including the directo
 * Mind that animation is not yet implemented. Working on it!
 * Nodes use original quaternion rotation that affects user interface.
 Maybe convert them into euler angles.
-* Sometimes b3d files contain objects that were joined together in a single mesh
-(that's not my fault, see raw json data).
-I'm splitting objects with multiple meshes into separate objects
-(better than assigning different materials to individual faces)
-but I can't effectively split large meshes that use the same material.
-Maybe try proixmity-based clasterisation. Converting those meshes into
-a set of instances is even more complex, considering that differently
-scaled and rotated objects also can overlap.
+* Sometimes objects appear joined together in a single mesh (an attempt on hardware instancing, I guess).
+I'm splitting objects with multiple meshes into a separate objects but I can't effectively
+split large meshes into separate objects. Probably solvable with point cloud matching
+(considering that objects also can overlap).
 
 ### Export
 
