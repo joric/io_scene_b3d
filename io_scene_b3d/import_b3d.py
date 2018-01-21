@@ -572,13 +572,13 @@ def import_node(node, parent):
         objects.append(ob)
         if parent: ob.parent = parent
         ctx.scene.objects.link(ob)
-        root = ob
 
     for ob in objects:
         ob.rotation_mode='QUATERNION'
         ob.rotation_quaternion = flip(rot)
         ob.scale = flip(scale)
         ob.location = flip(pos)
+        root = ob
         break # rotate first (parent) only
 
     return root

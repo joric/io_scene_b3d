@@ -169,7 +169,7 @@ class DebugMacro(bpy.types.Operator):
 
         import_b3d.load(self, context, filepath=self.filepath)
 
-        bpy.ops.view3d.viewnumpad(type='FRONT', align_active=True)
+        bpy.ops.view3d.viewnumpad(type='FRONT', align_active=False)
         bpy.ops.view3d.view_all(use_all_regions=True, center=True)
 
         if bpy.context.region_data.is_perspective:
