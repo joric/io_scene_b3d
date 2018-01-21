@@ -157,12 +157,11 @@ class DebugMacro(bpy.types.Operator):
     def execute(self, context):
         import sys,imp
 
+        for material in bpy.data.materials:
+            bpy.data.materials.remove(material)
+
         for obj in bpy.context.screen.scene.objects:
             bpy.data.objects.remove(obj, True)
-
-        for material in bpy.data.materials:
-            material.user_clear()
-            bpy.data.materials.remove(material)
 
         module = sys.modules['io_scene_b3d']
         imp.reload(module)
