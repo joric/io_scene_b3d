@@ -203,21 +203,22 @@ def make_skeleton():
 
     bpy.ops.object.mode_set(mode='EDIT',toggle=False)
 
+    bones = {}
+
     # copy bones positions from precalculated objects
-    for bone_id in range(len(bonesdata)):
-        bonedata = bonesdata[bone_id]
-        bonename = bonedata[0]
-        o = bpy.data.objects[bonename]
-        bone = a.data.edit_bones.new(bonename)
+    for bone_id, (name, pos, rot, parent_id) in enumerate(bonesdata):
+        o = bpy.data.objects[name]
+        bone = a.data.edit_bones.new(name)
         bone.tail = o.matrix_world.to_translation()
         if o.parent:
             bone.head = o.parent.matrix_world.to_translation()
+        bones[bone_id] = bone
+        if parent_id != -1:
+            bones[bone_id].parent = bones[parent_id]
 
     # delete all objects with the same names as bones
-    for bone_id in range(len(bonesdata)):
-        bonedata = bonesdata[bone_id]
-        bonename = bonedata[0]
-        bpy.data.objects.remove(bpy.data.objects[bonename])
+    for name, pos, rot, parent_id in bonesdata:
+        bpy.data.objects.remove(bpy.data.objects[name])
 
     bpy.ops.object.mode_set(mode='OBJECT')
 
