@@ -13,8 +13,10 @@ try:
 except:
     blender = False
 
-debug = False
-postprocess = True
+debug = True
+postprocess = False
+
+armatures = []
 
 def indent(level):
      print(' '*level, end='')
@@ -94,35 +96,48 @@ def word(long):
                 break
     return s.decode()
 
+"""
 def check_armature():
     global armobj,newarm
     armobj=None
     newarm=None
-    scn = Scene.GetCurrent()
-    scene = bpy.data.scenes.active
+    #scn = Scene.GetCurrent()
+    scene = bpy.context.scene #bpy.data.scenes.active
     for object in scene.objects:
-        if object.getType()=='Armature':
+        if object.type=='Armature': #object.getType()=='Armature':
             if object.name == 'armature':
                 scene.objects.unlink(object)
     for object in bpy.data.objects:
         if object.name == 'armature':
-            armobj = Blender.Object.Get('armature')
-            newarm = armobj.getData()
-            newarm.makeEditable()    
+            armobj = object #Blender.Object.Get('armature')
+            newarm = armobj.data#armobj.getData()
+
+            #newarm.makeEditable()    
+
+            for i in bpy.context.selected_objects: i.select = False #deselect all objects
+            armobj.select = True
+            armobj.show_x_ray = True
+            bpy.context.scene.objects.active = armobj
+            bpy.ops.object.mode_set(mode='EDIT',toggle=False)
+
             for bone in newarm.bones.values():
                 del newarm.bones[bone.name]
             newarm.update()
-    if armobj==None: 
-        armobj = Blender.Object.New('Armature','armature')
-    if newarm==None: 
-        newarm = Armature.New('armature')
+    if armobj==None:
+        armobj = bpy.data.objects.new('armature', bpy.data.armatures.new('armature')) #Blender.Object.New('Armature','armature')
+
+    if newarm==None:
+        newarm = bpy.data.armatures.new('armature')#Armature.New('armature')
         armobj.link(newarm)
-    scn.link(armobj)
+    #scn.link(armobj)
+    scene.link(armobj)
     newarm.drawType = Armature.STICK
     armobj.drawMode = Blender.Object.DrawModes.XRAY
     for object in scene.objects:
         if 'model' in object.name and object.getType()=='Mesh':
                 armobj.makeParentDeform([object],1,0)
+"""
+
 
 def make_bone(): 
     newarm.makeEditable()
@@ -132,6 +147,7 @@ def make_bone():
         eb = Armature.Editbone() 
         newarm.bones[bonename] = eb
     newarm.update()
+
 
 def make_bone_parent():
     newarm.makeEditable()
@@ -170,6 +186,43 @@ def make_bone_position():
 
 def skeleton():
     check_armature(),make_bone(),make_bone_parent();make_bone_position()
+
+
+def make_skeleton():
+    objName = 'armature'
+    a = bpy.data.objects.new(objName, bpy.data.armatures.new(objName))
+    armatures.append(a);
+    ctx.scene.objects.link(a)
+
+    for i in bpy.context.selected_objects: i.select = False #deselect all objects
+
+    a.select = True
+    a.show_x_ray = True
+    #a.data.draw_type = 'STICK'
+    bpy.context.scene.objects.active = a
+
+    bpy.ops.object.mode_set(mode='EDIT',toggle=False)
+
+    # copy bones positions from precalculated objects
+    for bone_id in range(len(bonesdata)):
+        bonedata = bonesdata[bone_id]
+        bonename = bonedata[0]
+        o = bpy.data.objects[bonename]
+        bone = a.data.edit_bones.new(bonename)
+        bone.tail = o.matrix_world.to_translation()
+        if o.parent:
+            bone.head = o.parent.matrix_world.to_translation()
+
+    # delete all objects with the same names as bones
+    for bone_id in range(len(bonesdata)):
+        bonedata = bonesdata[bone_id]
+        bonename = bonedata[0]
+        bpy.data.objects.remove(bpy.data.objects[bonename])
+
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    for i in bpy.context.selected_objects: i.select = False #deselect all objects
+
 
 """
 def find_0():
@@ -297,8 +350,6 @@ def b3d():
             armobj.makeParentDeform([object],1,0)
     print(plik.tell())
 """
-
-
 def word(long):
     s=b''
     for j in range(0,long):
@@ -338,8 +389,7 @@ def parse_node(next, level=0):
     #if debug: indent(level); print(name)
     #print('position/scale/rotation', p,s,r)
 
-    node = {'name':name, 'position':p, 'scale':s,'rotation':r,
-        'meshes':[], 'vertices':[]}
+    node = {'name':name, 'position':p, 'scale':s, 'rotation':r}
 
     while plik.tell()<next:
         sig, pos, size, nextc = next_chunk()
@@ -372,6 +422,7 @@ def parse_node(next, level=0):
             #print(keys)
             #print('total keys', name, len(keys), keys)
 
+        # weights, the node is the bone itself
         elif sig=='BONE':
             bones = []
             while plik.tell()<nextc:
@@ -380,8 +431,13 @@ def parse_node(next, level=0):
                 bones.append((vertex_id, weight))
             #print(bones)
 
-            node['bones'] = bones
+            if 'bones' not in node.keys():
+                node['bones'] = []
 
+            #node['bones'].append(bones)
+            node['bones'] = bones # 99% single chunk
+
+        # meshes, one set of vertices, multiple sets of faces
         elif sig=='MESH':
             brush_id = i(1)[0]
 
@@ -414,6 +470,7 @@ def parse_node(next, level=0):
                     vertex_id = i(3)
                     indices.append(vertex_id)
 
+                if 'meshes' not in node.keys(): node['meshes'] = []
                 node['meshes'].append({'brush_id':brush_id, 'indices':indices})
 
                 #print('brush_id', brush_id, 'ids', len(ids))
@@ -432,6 +489,10 @@ def b3d():
     data['nodes'] = []
     data['brushes'] = []
     data['textures'] = []
+
+    global bonesdata, bones_ids
+    bonesdata = []
+    bones_ids = {}
 
     while True:
         sig, pos, size, next = next_chunk()
@@ -475,6 +536,8 @@ def flip(v):
     #return v
     return ((v[0],v[2],v[1]) if len(v)<4 else (v[0], v[1],v[3],v[2]))
 
+bones = {}
+
 def import_node(node, parent):
 
     objName = node['name']
@@ -487,8 +550,17 @@ def import_node(node, parent):
 
     objects = []
 
+    if 'bones' in node.keys():
+        bone_name = objName
+        parent_id = -1
+        if parent:
+            if parent.name in bones_ids.keys():
+                parent_id = bones_ids[parent.name]
+        bonesdata.append([bone_name,pos,rot,parent_id])
+        bones_ids[bone_name] = len(bonesdata)-1
+
     # walk through faces and collect vertices
-    for m in node['meshes']:
+    for m in (node['meshes'] if 'meshes' in node.keys() else []):
         objIndex += 1
         if objIndex>0:
             objName = "%s.%03d" % (node['name'], objIndex)
@@ -550,8 +622,7 @@ def import_node(node, parent):
                 if mat.active_texture:
                     uv_face.image = mat.active_texture.image
 
-        if len(node['meshes']) and postprocess:
-
+        if postprocess:
             ops.object.mode_set(mode='EDIT')
             ops.mesh.select_all(action='SELECT')
 
@@ -591,10 +662,11 @@ def parse_nodes(nodes, level=0, parent=None):
             keys = '' if 'keys' not in node.keys() else '\tkeys: '+str(len(node['keys']))
             fr = '\trot: '+','.join(['%.2f' % x for x in node['rotation']])
             fp = '\tpos: '+','.join(['%.2f' % x for x in node['position']])
-            v = '\tvertices:'+str(len(node['vertices']))
-            m = '\tmeshes:'+str(len(node['meshes']))
+            v = '\tvertices:'+str(len(node['vertices'] if 'vertices' in node.keys() else []))
+            m = '\tmeshes:'+str(len(node['meshes'] if 'meshes' in node.keys() else []))
+            b = '\tbones:'+str(len(node['bones'] if 'bones' in node.keys() else []))
             indent(level)
-            print(node['name'], fr, fp, keys, v, m)
+            print(node['name'], fr, fp, keys, v, m, b)
 
         if blender:
             ob = import_node(node, parent)
@@ -609,7 +681,7 @@ def load_b3d(filepath,
              IMAGE_SEARCH=True,
              APPLY_MATRIX=True,
              global_matrix=None):
-    global plik,g,dir,ctx,data,images,materials
+    global plik,g,dir,ctx,data,images,materials,armatures
     print('Loading', filepath)
     plik = open(filepath,'rb')
     file = os.path.basename(filepath)
@@ -645,6 +717,9 @@ def load_b3d(filepath,
 
     parse_nodes(data['nodes'])
 
+    if bonesdata:
+        make_skeleton()
+
 def load(operator,
          context,
          filepath="",
@@ -669,13 +744,15 @@ def import_b3d(filepath):
     plik = open(filepath,'rb')
     b3d()
 
-    import json
-    print(json.dumps(data,separators=(',',':'),indent=1))
+    if not debug:
+        import json
+        print(json.dumps(data,separators=(',',':'),indent=1))
 
     parse_nodes(data['nodes'])
 
-#filepath = 'C:/Games/GnomE/media/models/gnome/model.b3d'
-filepath = 'C:/Games/GnomE/media/levels/level1.b3d'
+filepath = 'C:/Games/GnomE/media/models/gnome/model.b3d'
+#filepath = 'C:/Games/GnomE/media/levels/level1.b3d'
+#filepath = 'C:/Games/GnomE/media/models/gnome/go.b3d'
 
 if __name__ == "__main__":
     if not blender:
