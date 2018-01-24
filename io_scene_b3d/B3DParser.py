@@ -122,12 +122,12 @@ class B3DParser:
                 flags = self.i(1)[0]
                 keys = []
                 while self.fp.tell()<next:
-                    key = {'frame':self.i(1)[0]}
+                    key = dotdict({'frame':self.i(1)[0]})
                     if flags & 1: key['position'] = self.f(3)
                     if flags & 2: key['scale'] = self.f(3)
                     if flags & 4: key['rotation'] = self.f(4)
                     keys.append(key)
-                self.cb_data(chunk, {'keys':keys})
+                self.cb_data(chunk, keys)
 
             self.fp.seek(next)
 
@@ -181,6 +181,10 @@ class B3DList(B3DParser):
             if 'faces' not in node:
                 node.faces = []
             node.faces.append(dotdict(data))
+        elif chunk=='KEYS':
+            if 'keys' not in node:
+                node['keys'] = []
+            node['keys'].extend(data)
         elif chunk in ['ANIM', 'TEXS', 'BRUS']:
             self.data.update(data)
 

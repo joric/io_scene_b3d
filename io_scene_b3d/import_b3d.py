@@ -26,8 +26,10 @@ armatures = []
 bonesdata = []
 weighting = {}
 bones_ids = {}
+bones_node = None
 
-def make_skeleton():
+def make_skeleton(node):
+
     objName = 'armature'
     a = bpy.data.objects.new(objName, bpy.data.armatures.new(objName))
 
@@ -47,6 +49,9 @@ def make_skeleton():
 
     # copy bones positions from precalculated objects
     for bone_id, (name, pos, rot, parent_id) in enumerate(bonesdata):
+        if name not in bpy.data.objects:
+            return
+
         ob = bpy.data.objects[name]
         #if parent_id != -1: name = ob.parent.name
         bone = a.data.edit_bones.new(name)
@@ -88,6 +93,73 @@ def make_skeleton():
                 #vertex_id = remaps[objName][vertex_id]
                 group_indices = [vertex_id]
                 group.add(group_indices, weight, 'REPLACE')
+
+
+    actionName = 'default_action'
+    action = bpy.data.actions.new(actionName)
+    action.use_fake_user = True
+
+    a.animation_data_create()
+    a.animation_data.action = action
+
+
+    #action.fps = 30fps if fps else 30
+    bpy.context.scene.render.fps = 60
+    bpy.context.scene.render.fps_base = 1
+
+    #ops.object.mode_set(mode='POSE')
+    bpy.context.scene.frame_start = 0
+    bpy.context.scene.frame_end = node.frames - 1
+
+
+    """
+    bone_string = 'Bip01'
+    bone = {'name' : bone_string}
+
+    curvesLoc = None
+    curvesRot = None
+    bone_string = "pose.bones[\"{}\"].".format(bone.name)
+    group = action.groups.new(name=bone.name)
+
+    for keyframe in range(node.frames):
+        if curvesLoc and curvesRot: break
+        if keyframe.pos and not curvesLoc:
+            curvesLoc = []
+            for i in range(3):
+                curve = action.fcurves.new(data_path=bone_string + "location",index=i)
+                curve.group = group
+                curvesLoc.append(curve)
+        if keyframe.rot and not curvesRot:
+            curvesRot = []
+            for i in range(3 if smd.rotMode == 'XYZ' else 4):
+                curve = action.fcurves.new(data_path=bone_string + "rotation_" + ("euler" if smd.rotMode == 'XYZ' else "quaternion"),index=i)
+                curve.group = group
+                curvesRot.append(curve)
+
+
+    for i in range(3):
+        curve = action.fcurves.new(data_path=bone_string + "location",index=i)
+        group = action.groups.new(name=bone_name)
+        curve.group = group
+
+    location = (10,50,100)
+    for frame in range(node.frames):
+        for i in range(3):
+            curve.keyframe_points.add(1)
+            curve.keyframe_points[-1].co = [frame, location[i]]
+
+    curve = action.fcurves.new(data_path=bone_string + "rotation_quaternion",index=i)
+    group = action.groups.new(name=bone_name)
+    curve.group = group
+
+    rotation = (1,0,1,0)
+        for i in range(4):
+          curvesRot[i].keyframe_points.add(1)
+          curvesRot[i].keyframe_points[-1].co = [keyframe.frame, bone.rotation_quaternion[i]]
+
+    #curve = action.fcurves.new(data_path=bone_string + "rotation_quaternion",index=i)
+    """
+
 
 def assign_material_slots(ob, node, mat_slots):
     bpy.context.scene.objects.active = ob
@@ -163,12 +235,14 @@ def import_mesh(node):
     if len(node.faces)>1:
         assign_material_slots(ob, node, mat_slots)
 
-    #postprocess(ob, mesh, node)
+    #postprocess(ob, mesh, node) # breaks weighting
 
     return ob
 
 def import_node(node, parent):
-    if 'vertices' in node:
+    global armatures, bonesdata, weighting, bones_ids, bones_node
+
+    if 'vertices' in node and 'faces' in node:
         ob = import_mesh(node)
     else:
         ob = bpy.data.objects.new(node.name, None)
@@ -198,6 +272,10 @@ def import_node(node, parent):
         for vert_id, weight in node['bones']:
             w.append((vert_id, weight))
         weighting[bone_name] = w
+
+    if 'bones' in node and not bones_node:
+        print(bones_node)
+        bones_node = node
 
     return ob
 
@@ -246,9 +324,10 @@ def load_b3d(filepath,
             mtex.use_map_color_diffuse = True
         materials[i] = material
 
-    global armatures, bonesdata, weighting, bones_ids
+    global armatures, bonesdata, weighting, bones_ids, bones_node
     walk(data)
-    make_skeleton()
+    if data.frames:
+        make_skeleton(data)
 
 def load(operator,
          context,
