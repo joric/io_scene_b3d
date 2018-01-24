@@ -1,5 +1,5 @@
 #!/bin/python3
-# by Joric
+# by Joric, http://github.com/joric/io_scene_b3d
 
 try:
     from B3DParser import *
