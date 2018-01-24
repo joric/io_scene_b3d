@@ -7,7 +7,6 @@ import struct
 class B3DParser:
     def __init__(self):
         self.fp = None
-        self.size = 0
 
     def gets(self):
         s = b''
