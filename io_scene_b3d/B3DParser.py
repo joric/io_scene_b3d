@@ -213,18 +213,16 @@ class B3DTree(B3DList):
         self.data.update({'nodes':tree})
         return self.data
 
-
-filepath = 'C:/Games/GnomE/media/models/gnome/model.b3d'
-#filepath = 'C:/Games/GnomE/media/levels/level1.b3d'
-#filepath = 'C:/Games/GnomE/media/models/gnome/go.b3d'
-#filepath = 'C:/Games/GnomE/media/models/flag/flag.b3d'
-
 def dump(node, level=0):
     for node in node.nodes:
         print(node.name)
         dump(node, level+1)
 
 if __name__ == "__main__":
+    import sys
+    if len(sys.argv)<2:
+        sys.exit(0)
+    filepath = sys.argv[1]
     import json
     #B3DDebugParser().parse(filepath) # text dump
     data = B3DList().parse(filepath) # json list
