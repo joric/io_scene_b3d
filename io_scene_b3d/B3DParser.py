@@ -218,9 +218,10 @@ def dump(node, level=0):
         print(node.name)
         dump(node, level+1)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     import sys
     if len(sys.argv)<2:
+        print('Usage: B3DParser.py [filename.b3d]')
         sys.exit(0)
     filepath = sys.argv[1]
     #B3DDebugParser().parse(filepath) # text dump
