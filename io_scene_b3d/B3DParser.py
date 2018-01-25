@@ -223,10 +223,10 @@ if __name__ == "__main__":
     if len(sys.argv)<2:
         sys.exit(0)
     filepath = sys.argv[1]
-    import json
     #B3DDebugParser().parse(filepath) # text dump
-    data = B3DList().parse(filepath) # json list
+    #data = B3DList().parse(filepath) # json list
+    data = B3DTree().parse(filepath) # json tree
+    import json
     print(json.dumps(data, indent=1))
-    #data = B3DTree().parse(filepath) # json tree
     #dump(data)
 
