@@ -300,7 +300,7 @@ def load_b3d(filepath,
 
     # load images
     dirname = os.path.dirname(filepath)
-    for i, texture in enumerate(data['textures']):
+    for i, texture in enumerate(data['textures'] if 'textures' in data else []):
         texture_name = os.path.basename(texture['name'])
         for mat in data.materials:
             if mat.tids[0]==i:
@@ -308,7 +308,7 @@ def load_b3d(filepath,
                     place_holder=False, recursive=IMAGE_SEARCH)
 
     # create materials
-    for i, mat in enumerate(data.materials):
+    for i, mat in enumerate(data.materials if 'materials' in data else []):
         name = mat.name
         material = bpy.data.materials.new(name)
         material.diffuse_color = mat.rgba[:-1]
