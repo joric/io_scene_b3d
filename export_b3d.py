@@ -2,20 +2,21 @@
 
 """
 Name: 'B3D Exporter (.b3d)...'
-Blender: 259
+Blender: 280
 Group: 'Export'
 Tooltip: 'Export to Blitz3D file format (.b3d)'
 """
-__author__ = ["iego 'GaNDaLDF' Parisi, MTLZ (is06), Joerg Henrichs, Marianne Gagnon"]
-__url__ = ["www.gandaldf.com"]
-__version__ = "3.0"
+__author__ = ["Diego 'GaNDaLDF' Parisi, MTLZ (is06), Joerg Henrichs, Marianne Gagnon, Joric"]
+__url__ = ["https://github.com/joric/io_scene_b3d"]
+__version__ = "3.2"
 __bpydoc__ = """\
 """
 
-# BLITZ3D EXPORTER 3.0
+# BLITZ3D EXPORTER 3.2
 # Copyright (C) 2009 by Diego "GaNDaLDF" Parisi  -  www.gandaldf.com
 # Lightmap issue fixed by Capricorn 76 Pty. Ltd. - www.capricorn76.com
 # Blender 2.63 compatiblity based on work by MTLZ, www.is06.com
+# Blender 2.80 compatibility by Joric
 # With changes by Marianne Gagnon and Joerg Henrichs, supertuxkart.sf.net (Copyright (C) 2011-2012)
 #
 # LICENSE:
@@ -36,9 +37,9 @@ __bpydoc__ = """\
 bl_info = {
     "name": "B3D (BLITZ3D) Model Exporter",
     "description": "Exports a blender scene or object to the B3D (BLITZ3D) format",
-    "author": "Diego 'GaNDaLDF' Parisi, MTLZ (is06), Joerg Henrichs, Marianne Gagnon",
-    "version": (3,1),
-    "blender": (2, 5, 9),
+    "author": "Diego 'GaNDaLDF' Parisi, MTLZ (is06), Joerg Henrichs, Marianne Gagnon, Joric",
+    "version": (3,2),
+    "blender": (2, 8, 0),
     "api": 31236,
     "location": "File > Export",
     "warning": '', # used for warning icon and text in addons panel
@@ -179,17 +180,19 @@ def tesselate_if_needed(objdata):
 
 def getUVTextures(obj_data):
     # BMesh in blender 2.63 broke this
-    if bpy.app.version[1] >= 63:
-        return tesselate_if_needed(obj_data).tessface_uv_textures
-    else:
-        return obj_data.uv_textures
+    #if bpy.app.version[1] >= 63:
+    #    return tesselate_if_needed(obj_data).tessface_uv_textures #2.8 breaks this
+    #else:
+    #    return obj_data.uv_textures
+    return obj_data.uv_layers
 
 def getFaces(obj_data):
     # BMesh in blender 2.63 broke this
-    if bpy.app.version[1] >= 63:
-        return tesselate_if_needed(obj_data).tessfaces
-    else:
-        return obj_data.faces
+    #if bpy.app.version[1] >= 63:
+    #    return tesselate_if_needed(obj_data).tessfaces
+    #else:
+    #    return obj_data.faces
+    return obj_data.polygons
 
 def getVertexColors(obj_data):
     # BMesh in blender 2.63 broke this
@@ -197,6 +200,16 @@ def getVertexColors(obj_data):
         return tesselate_if_needed(obj_data).tessface_vertex_colors
     else:
         return obj_data.vertex_colors
+
+def getFaceImage(face):
+    try:
+        material = obj.data.materials[face.material_index]
+        texImage = material.node_tree.nodes["Image Texture"]
+        return texImage.image
+    except:
+        pass
+    return None
+
 
 # ==== Write TEXS Chunk ====
 def write_texs(objects=[]):
@@ -297,11 +310,9 @@ def write_texs(objects=[]):
                         #data.activeUVLayer = uvlayer
                         
                         #if DEBUG: print("<uv face=", face.index, ">")
-                        
-                        img = getUVTextures(data)[iuvlayer].data[face.index].image
-                        
+
+                        img = getFaceImage(face)
                         if img:
-                            
                             if img.filepath in trimmed_paths:
                                 img_name = trimmed_paths[img.filepath]
                             else:
@@ -389,12 +400,12 @@ def write_brus(objects=[]):
                         
                         if face.index >= len(uv_textures[iuvlayer].data):
                             continue
-                        
-                        img = uv_textures[iuvlayer].data[face.index].image
-                        
+
+                        img = getFaceImage(face)
+
                         if not img:
                             continue
-                        
+
                         img_found = 1
                         
                         if img.filepath in trimmed_paths:
@@ -424,7 +435,7 @@ def write_brus(objects=[]):
                             mat_colr = mat_data.diffuse_color[0]
                             mat_colg = mat_data.diffuse_color[1]
                             mat_colb = mat_data.diffuse_color[2]
-                            mat_alpha = mat_data.alpha
+                            mat_alpha = 1.0 # mat_data.alpha # 2.8 fail!
                             mat_name = mat_data.name
 
                             if not mat_name in brus_stack:
@@ -618,7 +629,7 @@ def write_node(objects=[]):
                     matrix = TRANS_MATRIX.copy()
                     scale_matrix = mathutils.Matrix()
                 else:
-                    matrix = obj.matrix_world*TRANS_MATRIX
+                    matrix = obj.matrix_world @ TRANS_MATRIX
                     scale_matrix = obj.matrix_world.copy()
                 
                 
@@ -690,10 +701,10 @@ def write_node(objects=[]):
                         #print("    [%.2f %.2f %.2f %.2f]" % (b[2][0], b[2][1], b[2][2], b[2][3]))
                         #print("    [%.2f %.2f %.2f %.2f]" % (b[3][0], b[3][1], b[3][2], b[3][3]))
                         
-                        par_matrix = b * a
+                        par_matrix = b @ a
                         
                         transform = mathutils.Matrix([[1,0,0,0],[0,0,-1,0],[0,-1,0,0],[0,0,0,1]])
-                        par_matrix = transform*par_matrix*transform
+                        par_matrix = transform @ par_matrix @ transform
                         
                         # FIXME: that's ugly, find a clean way to change the matrix.....
                         if bpy.app.version[1] >= 62:
@@ -717,7 +728,7 @@ def write_node(objects=[]):
                         #print("==== "+bone.name+" ====")
                         #print("Without parent")
 
-                        m = arm_matrix*bone.matrix_local
+                        m = arm_matrix @ bone.matrix_local
                         
                         #c = arm.matrix_world
                         #print("A : [%.3f %.3f %.3f %.3f]" % (c[0][0], c[0][1], c[0][2], c[0][3]))
@@ -731,7 +742,7 @@ def write_node(objects=[]):
                         #print("    [%.3f %.3f %.3f %.3f]" % (c[2][0], c[2][1], c[2][2], c[2][3]))
                         #print("    [%.3f %.3f %.3f %.3f]" % (c[3][0], c[3][1], c[3][2], c[3][3]))
                         
-                        par_matrix = m*mathutils.Matrix([[-1,0,0,0],[0,0,1,0],[0,1,0,0],[0,0,0,1]])
+                        par_matrix = m @ mathutils.Matrix([[-1,0,0,0],[0,0,1,0],[0,1,0,0],[0,0,0,1]])
                                                 
                         #c = par_matrix
                         #print("C : [%.3f %.3f %.3f %.3f]" % (c[0][0], c[0][1], c[0][2], c[0][3]))
@@ -763,7 +774,7 @@ def write_node(objects=[]):
                     arm_matrix = arm.matrix_world
                     
                     transform = mathutils.Matrix([[-1,0,0,0],[0,0,1,0],[0,1,0,0],[0,0,0,1]])
-                    arm_matrix = transform*arm_matrix
+                    arm_matrix = transform @ arm_matrix
 
                     for bone_name in arm.data.bones.keys():
                         #bone_matrix = mathutils.Matrix(arm_pose.bones[bone_name].poseMatrix)
@@ -801,7 +812,7 @@ def write_node(objects=[]):
                                 # if has parent
                                 if bone[BONE_PARENT]:
                                     par_matrix = mathutils.Matrix(arm_pose.bones[bone[BONE_PARENT].name].matrix)
-                                    bone_matrix = par_matrix.inverted()*bone_matrix
+                                    bone_matrix = par_matrix.inverted() @ bone_matrix
                                 else:
                                     if b3d_parameters.get("local-space"):
                                         bone_matrix = bone_matrix*mathutils.Matrix([[-1,0,0,0],[0,0,1,0],[0,1,0,0],[0,0,0,1]])
@@ -812,7 +823,7 @@ def write_node(objects=[]):
                                         #    print("arm_matrix = ", arm_matrix)
                                         #    print("bone_matrix = ", bone_matrix)
                                         
-                                        bone_matrix = arm_matrix*bone_matrix
+                                        bone_matrix = arm_matrix @ bone_matrix
                                         
                                         #if frame_count == 1:
                                         #    print("arm_matrix*bone_matrix", bone_matrix)
@@ -992,7 +1003,7 @@ def write_node_mesh(obj,obj_count,arm_action,exp_root):
     if arm_action:
         data = obj.data
     else:
-        data = obj.to_mesh(the_scene, True, 'PREVIEW')
+        data = obj.to_mesh()
     
     temp_buf += write_int(-1) #Brush ID
     temp_buf += write_node_mesh_vrts(obj, data, obj_count, arm_action, exp_root) #NODE MESH VRTS
@@ -1063,7 +1074,23 @@ def write_node_mesh_vrts(obj, data, obj_count, arm_action, exp_root):
         mesh_matrix = obj.matrix_world.copy()
     
     #import time
-        
+
+    # new! 2.8 let's precalculate loop indices for every face and vertex id
+    me = data
+
+    my_uvs = {}
+
+    for f in me.polygons:
+
+        my_uvs[f.index] = []
+
+        for i in f.loop_indices:
+            l = me.loops[i]
+            v = me.vertices[l.vertex_index]
+            for j,ul in enumerate(me.uv_layers):
+                uv = ul.data[l.index].uv
+                my_uvs[f.index].append(uv)
+
     uv_layers_count = len(getUVTextures(data))
     for face in getFaces(data):
         
@@ -1084,12 +1111,12 @@ def write_node_mesh_vrts(obj, data, obj_count, arm_action, exp_root):
             #a = time.time()
                             
             if arm_action:
-                v = mesh_matrix * data.vertices[vert].co
+                v = mesh_matrix @ data.vertices[vert].co
                 vert_matrix = mathutils.Matrix.Translation(v)
             else:
                 vert_matrix = mathutils.Matrix.Translation(data.vertices[vert].co)
 
-            vert_matrix *= TRANS_MATRIX
+            vert_matrix @= TRANS_MATRIX
             vcoord = vert_matrix.to_translation()
 
             temp_buf.append(write_float_triplet(vcoord.x, vcoord.z, vcoord.y))
@@ -1101,9 +1128,9 @@ def write_node_mesh_vrts(obj, data, obj_count, arm_action, exp_root):
                 norm_matrix = mathutils.Matrix.Translation(data.vertices[vert].normal)
 
                 if arm_action:
-                    norm_matrix *= mesh_matrix
+                    norm_matrix @= mesh_matrix
 
-                norm_matrix *= TRANS_MATRIX
+                norm_matrix @= TRANS_MATRIX
                 normal_vector = norm_matrix.to_translation()
                 
                 temp_buf.append(write_float_triplet(normal_vector.x,  #NX
@@ -1139,10 +1166,23 @@ def write_node_mesh_vrts(obj, data, obj_count, arm_action, exp_root):
                 except:
                     pass
                 vertex_groups[ivert][vg.name] = w
-            
+
+
+            # NEW! 2.8 code to write uv from face and vertex_id
+            # vertex_id, vert is in enumerate (face.vertices)
+            # face is from data.polygons
+            # uv_layers_count is from data.uv_layers
+
+
+            for iuvlayer in range(uv_layers_count):
+                uv = my_uvs[face.index][vertex_id]
+                temp_buf.append(write_float_couple(uv[0], 1-uv[1]) )
+
+
             #e = time.time()
             #time_in_b2 += e - d
-            
+
+            """
             # ==== !!bottleneck here!! (40% of the function)
             if vertex_id == 0:
                 for iuvlayer in range(uv_layers_count):
@@ -1160,6 +1200,7 @@ def write_node_mesh_vrts(obj, data, obj_count, arm_action, exp_root):
                 for iuvlayer in range(uv_layers_count):
                     uv = getUVTextures(data)[iuvlayer].data[face.index].uv4
                     temp_buf.append(write_float_couple(uv[0], 1-uv[1]) ) # U, V
+            """
 
             #f = time.time()
             #time_in_b3 += f - e
@@ -1209,12 +1250,12 @@ def write_node_mesh_tris(obj, data, obj_count,arm_action,exp_root):
                 
                 if iuvlayer >= uv_layer_count:
                     continue
-                
+
                 img_id = -1
-                
-                img = uv_textures[iuvlayer].data[face.index].image
+
+                img = getFaceImage(face)
+
                 if img:
-                    
                     if img.filepath in trimmed_paths:
                         img_name = trimmed_paths[img.filepath]
                     else:

@@ -19,9 +19,9 @@
 # <pep8-80 compliant>
 
 bl_info = {
-    "name": "Blitz 3D format",
+    "name": "Blitz 3D format (.b3d)",
     "author": "Joric",
-    "blender": (2, 74, 0),
+    "blender": (2, 80, 0),
     "location": "File > Import-Export",
     "description": "Import-Export B3D, meshes, uvs, materials, textures, "
                    "cameras & lamps",
@@ -49,24 +49,22 @@ from bpy.props import (
 from bpy_extras.io_utils import (
         ImportHelper,
         ExportHelper,
-        orientation_helper_factory,
+        orientation_helper,
         axis_conversion,
         )
 
 
-IOB3DOrientationHelper = orientation_helper_factory("IOB3DOrientationHelper", axis_forward='Y', axis_up='Z')
-
-
-class ImportB3D(bpy.types.Operator, ImportHelper, IOB3DOrientationHelper):
+@orientation_helper(axis_forward='Y', axis_up='Z')
+class ImportB3D(bpy.types.Operator, ImportHelper):
     """Import from B3D file format (.b3d)"""
     bl_idname = "import_scene.blitz3d_b3d"
     bl_label = 'Import B3D'
     bl_options = {'UNDO'}
 
     filename_ext = ".b3d"
-    filter_glob = StringProperty(default="*.b3d", options={'HIDDEN'})
+    filter_glob : StringProperty(default="*.b3d", options={'HIDDEN'})
 
-    constrain_size = FloatProperty(
+    constrain_size : FloatProperty(
             name="Size Constraint",
             description="Scale the model by 10 until it reaches the "
                         "size constraint (0 to disable)",
@@ -74,13 +72,13 @@ class ImportB3D(bpy.types.Operator, ImportHelper, IOB3DOrientationHelper):
             soft_min=0.0, soft_max=1000.0,
             default=10.0,
             )
-    use_image_search = BoolProperty(
+    use_image_search : BoolProperty(
             name="Image Search",
             description="Search subdirectories for any associated images "
                         "(Warning, may be slow)",
             default=True,
             )
-    use_apply_transform = BoolProperty(
+    use_apply_transform : BoolProperty(
             name="Apply Transform",
             description="Workaround for object transformations "
                         "importing incorrectly",
@@ -103,18 +101,20 @@ class ImportB3D(bpy.types.Operator, ImportHelper, IOB3DOrientationHelper):
         return import_b3d.load(self, context, **keywords)
 
 
-class ExportB3D(bpy.types.Operator, ExportHelper, IOB3DOrientationHelper):
+@orientation_helper(axis_forward='Y', axis_up='Z')
+class ExportB3D(bpy.types.Operator, ExportHelper):
     """Export to B3D file format (.b3d)"""
     bl_idname = "export_scene.blitz3d_b3d"
     bl_label = 'Export B3D'
 
     filename_ext = ".b3d"
-    filter_glob = StringProperty(
+
+    filter_glob: StringProperty(
             default="*.b3d",
             options={'HIDDEN'},
             )
 
-    use_selection = BoolProperty(
+    use_selection: BoolProperty(
             name="Selection Only",
             description="Export selected objects only",
             default=False,
@@ -147,60 +147,77 @@ def menu_func_import(self, context):
 
 class DebugMacro(bpy.types.Operator):
     bl_idname = "object.debug_macro"
-    bl_label = "b3d debug"
+    bl_label = "Debug Macro"
     bl_options = {'REGISTER', 'UNDO'}
 
     from . import import_b3d
+    from . import export_b3d
 
     filepath = bpy.props.StringProperty(name="filepath", default=import_b3d.filepath)
 
-    def execute(self, context):
+    def execute(self, context: bpy.context):
         import sys,imp
+
+        print("b3d, loading", self.filepath)
 
         for material in bpy.data.materials:
             bpy.data.materials.remove(material)
 
-        for obj in bpy.context.screen.scene.objects:
-            bpy.data.objects.remove(obj, True)
+        for obj in bpy.context.scene.objects:
+            bpy.data.objects.remove(obj, do_unlink=True)
 
         module = sys.modules['io_scene_b3d']
         imp.reload(module)
 
         import_b3d.load(self, context, filepath=self.filepath)
+        export_b3d.save(self, context, filepath=self.filepath.replace('.b3d','.exported.b3d'))
 
+        """
         bpy.ops.view3d.viewnumpad(type='FRONT', align_active=False)
+
         bpy.ops.view3d.view_all(use_all_regions=True, center=True)
 
         if bpy.context.region_data.is_perspective:
             bpy.ops.view3d.view_persportho()
+        """
 
         return {'FINISHED'}
 
 addon_keymaps = []
 
-def register():
-    bpy.utils.register_module(__name__)
+classes = (
+    ImportB3D,
+    ExportB3D,
+    DebugMacro
+)
 
-    bpy.types.INFO_MT_file_import.append(menu_func_import)
-    bpy.types.INFO_MT_file_export.append(menu_func_export)
+def register():
+    for cls in classes:
+        bpy.utils.register_class(cls)
+
+    bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
+    bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
 
     # handle the keymap
     wm = bpy.context.window_manager
 
-    km = wm.keyconfigs.addon.keymaps.new(name='Object Mode', space_type='EMPTY')
-    kmi = km.keymap_items.new(DebugMacro.bl_idname, 'D', 'PRESS', ctrl=True, shift=True)
-    addon_keymaps.append((km, kmi))
+    if wm.keyconfigs.addon:
+        km = wm.keyconfigs.addon.keymaps.new(name="Window", space_type='EMPTY')
+        kmi = km.keymap_items.new(DebugMacro.bl_idname, 'F', 'PRESS', ctrl=True, shift=True)
+        addon_keymaps.append((km, kmi))
+
 
 def unregister():
-    bpy.utils.unregister_module(__name__)
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
 
-    bpy.types.INFO_MT_file_import.remove(menu_func_import)
-    bpy.types.INFO_MT_file_export.remove(menu_func_export)
+    bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
+    bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
 
     # handle the keymap
     for km, kmi in addon_keymaps:
         km.keymap_items.remove(kmi)
-    addon_keymaps.clear()
+    del addon_keymaps[:]
 
 if __name__ == "__main__":
     register()
