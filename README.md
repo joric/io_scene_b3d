@@ -7,7 +7,7 @@ Blender Import-Export script for Blitz 3D .b3d files
 I don't have much time to maintain this and I get no PR's, so there are more recent forks:
 
 * https://github.com/GreenXenith/io_scene_b3d (recommended by [minetest wiki](https://wiki.minetest.net/Using_Blender#Exporting_B3D))
-* https://github.com/joric/io_scene_b3d/network/members (other forks)
+* https://github.com/joric/io_scene_b3d/network (other forks)
 
 ## Download
 
