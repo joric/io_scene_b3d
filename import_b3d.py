@@ -334,7 +334,7 @@ def load_b3d(filepath,
         material = bpy.data.materials.new(mat.name)
         material_mapping[i] = material.name
         material.diffuse_color = mat.rgba
-        material.blend_method = 'MULTIPLY' if mat.rgba[3] < 1.0 else 'OPAQUE'
+        material.blend_method = 'BLEND' if mat.rgba[3] < 1.0 else 'OPAQUE'
 
         tid = mat.tids[0] if len(mat.tids) else -1
 

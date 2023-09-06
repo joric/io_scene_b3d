@@ -153,7 +153,7 @@ class DebugMacro(bpy.types.Operator):
     from . import import_b3d
     from . import export_b3d
 
-    filepath = bpy.props.StringProperty(name="filepath", default=import_b3d.filepath)
+    filepath: bpy.props.StringProperty(name="filepath", default=import_b3d.filepath)
 
     def execute(self, context: bpy.context):
         import sys,imp
