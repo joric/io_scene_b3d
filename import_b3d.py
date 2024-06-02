@@ -419,13 +419,32 @@ def load_b3d(filepath,
     material_mapping = {}
     brush_mapping = {}
 
+    def get_matching_material(name, material_images):
+        if material:=bpy.data.materials.get(brush.name):
+            return material
+        scene = bpy.context.scene
+        for obj in scene.objects:
+            if obj.type == 'MESH' and obj.data.materials:
+                for material in obj.data.materials:
+                    images = set()
+                    nodes = material.node_tree.nodes
+                    for node in [node for node in nodes if node.type == 'TEX_IMAGE']:
+                        if node.image:
+                            image_name = node.image.name
+                            images.add(image_name)
+                    #print('checking', material.name, 'has', images, 'vs', name, 'has', material_images)
+                    if images and images <= material_images:
+                        print('matched, skipping', material.name, 'has', images, 'vs', name, 'has', material_images)
+                        return material
+
     for i, brush in enumerate(data.materials if 'materials' in data else []):
-        # do not create material with the same name, if exists
-        material = bpy.data.materials.get(brush.name)
-        if material:
-            material_mapping[i] = material.name
-            brush_mapping[i] = brush
-            continue
+        # do not create new material, if exists
+        remapExistingMaterials = True
+        if remapExistingMaterials:
+            if material:=get_matching_material(brush.name, set(images[tid][0] for tid in brush.tids if tid in images)):
+                material_mapping[i] = material.name
+                brush_mapping[i] = brush
+                continue
 
         material = bpy.data.materials.new(brush.name)
         material.diffuse_color = brush.rgba
