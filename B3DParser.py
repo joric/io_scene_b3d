@@ -4,6 +4,23 @@
 import os
 import struct
 
+FX_FULLBRIGHT=  0x0001
+FX_VERTEXCOLOR= 0x0002
+FX_FLATSHADED=  0x0004
+FX_NOFOG=       0x0008
+FX_DOUBLESIDED= 0x0010
+FX_VERTEXALPHA= 0x0020
+FX_ALPHATEST=   0x2000
+FX_CONDLIGHT=   0x4000
+FX_EMISSIVE=    0x8000
+
+BLEND_REPLACE=  0
+BLEND_ALPHA=    1
+BLEND_MULTIPLY= 2
+BLEND_ADD=      3
+BLEND_DOT3=     4
+BLEND_MULTIPLY2=5
+
 class B3DParser:
     def __init__(self):
         self.fp = None
@@ -133,27 +150,11 @@ class B3DParser:
 
         return self.cb_result()
 
-
-class B3DDebugParser(B3DParser):
-    def __init__(self):
-        B3DParser.__init__(self)
-        self.level = 0
-
-    def cb_next(self):
-        self.level += 1
-
-    def cb_prev(self):
-        self.level -= 1
-
-    def cb_data(self, chunk, data):
-        print(' '*self.level, end='')
-        print(chunk, data)
-
-
 class dotdict(dict):
     __getattr__ = dict.get
     __setattr__ = dict.__setitem__
 
+# json list format
 
 class B3DList(B3DParser):
     def __init__(self):
@@ -191,6 +192,7 @@ class B3DList(B3DParser):
     def cb_result(self):
         return self.data
 
+# json tree format (derived from B3DList, used in import)
 
 class B3DTree(B3DList):
     def __init__(self):
@@ -218,16 +220,102 @@ def dump(node, level=0):
         print(node.name)
         dump(node, level+1)
 
+# human readable text format
+
+class B3DDebugParser(B3DParser):
+    class B3DDebugParserItem:
+        def __init__(self, chunk=None, data=None, level=0):
+            self.chunk = chunk
+            self.data = data
+            self.level = level
+
+    def __init__(self, max_width=256, max_items=3):
+        B3DParser.__init__(self)
+        self.max_width = max_width
+        self.max_items = max_items
+        self.level = 0
+        self.counter = 0
+        self.item = self.B3DDebugParserItem()
+
+    def cb_next(self):
+        self.level += 1
+
+    def cb_prev(self):
+        self.level -= 1
+
+    def print_item(self, chunk, data, indent):
+        w = {'TEXS':'textures', 'BRUS':'materials'}
+        expand_data = chunk in w
+
+        # non-node items are always extra-indented
+        if chunk not in ('NODE','BB3D'):
+            indent += 1
+
+        if expand_data:
+            section = w[chunk]
+            print(' '*indent, end='')
+            print(chunk)
+            for i,d in enumerate(data[section]):
+                print(' '*indent, end='')
+                print(f' {chunk}[{i}]', d)
+        else:
+            print(' '*indent, end='')
+            w = self.max_width if self.max_width else 8192
+            s = str(data)
+            s = s[:w]+ f' ...' if len(s)>w else s
+            print(chunk, s)
+
+    def cb_data(self, chunk, data):
+        new = False
+        if self.item.chunk != chunk:
+            new = True
+        else:
+            self.counter += 1
+
+        if new or self.counter <= self.max_items:
+
+            # print the last repeated item, if any
+            if self.counter > self.max_items:
+                print(' '*self.item.level, end='')
+                print(f' (... {self.item.chunk} repeated {self.counter-self.max_items} times ...)')
+                self.print_item(self.item.chunk, self.item.data, self.item.level)
+
+            self.print_item(chunk, data, self.level)
+
+        if new:
+            self.counter = 1
+
+        self.item = self.B3DDebugParserItem(chunk, data, self.level)
+
+debug = True
+#filepath = 'C:/Games/GnomE/media/levels/level1.b3d'
+filepath = 'C:/Games/GnomE/media/models/gnome/model.b3d'
+#filepath = 'C:/Games/GnomE/media/models/medved/med_run.b3d'
+#filepath = 'C:/Games/GnomE/media/levels/level2.b3d'
+#filepath='C:/Games/MasterOfDefense/Data/Location1/location1.b3d'
+#filepath='C:/Games/MasterOfDefense/Data/Location5/location5.b3d'
+#filepath = 'C:/Games/GnomE/media/levels/level5.b3d'
+
+#filepath= 'C:/Games/Sonic World DX 1.2.4/Data/Characters/bio.b3d'
+
 if __name__ == '__main__':
     import sys
-    if len(sys.argv)<2:
+    if len(sys.argv)<2 and not debug:
         print('Usage: B3DParser.py [filename.b3d]')
         sys.exit(0)
-    filepath = sys.argv[1]
+    if not debug:
+        filepath = sys.argv[1]
+
     #B3DDebugParser().parse(filepath) # text dump
     #data = B3DList().parse(filepath) # json list
-    data = B3DTree().parse(filepath) # json tree
-    import json
-    print(json.dumps(data, indent=1))
+    #data = B3DTree().parse(filepath) # json tree
+
+    #import json
+    #print(json.dumps(data, indent=1))
     #dump(data)
+
+    sys.stdout = open('out.txt', 'w')
+    p = B3DDebugParser() # human readable
+    print('dumping', filepath)
+    p.parse(filepath)
 

@@ -20,16 +20,17 @@
 
 bl_info = {
     "name": "Blitz 3D format (.b3d)",
+    "description": "Import-Export for Blitz3D scenes or objects",
     "author": "Joric",
+    "version": (1, 2, 0),
     "blender": (2, 80, 0),
     "location": "File > Import-Export",
-    "description": "Import-Export B3D, meshes, uvs, materials, textures, "
-                   "cameras & lamps",
-    "warning": "",
-    "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/"
-                "Scripts/Import-Export/Blitz3D_B3D",
-    "support": 'OFFICIAL',
-    "category": "Import-Export"}
+    "warning": "",  # used for warning icon and text in addons panel
+    "doc_url": "https://github.com/joric/io_scene_b3d/blob/master/README.md",
+    "tracker_url": "https://github.com/joric/io_scene_b3d/issues",
+    "support": "COMMUNITY",
+    "category": "Import-Export",
+}
 
 if "bpy" in locals():
     import importlib
@@ -37,7 +38,6 @@ if "bpy" in locals():
         importlib.reload(import_b3d)
     if "export_b3d" in locals():
         importlib.reload(export_b3d)
-
 
 import bpy
 from bpy.props import (
@@ -101,45 +101,201 @@ class ImportB3D(bpy.types.Operator, ImportHelper):
         return import_b3d.load(self, context, **keywords)
 
 
-@orientation_helper(axis_forward='Y', axis_up='Z')
 class ExportB3D(bpy.types.Operator, ExportHelper):
     """Export to B3D file format (.b3d)"""
-    bl_idname = "export_scene.blitz3d_b3d"
-    bl_label = 'Export B3D'
+    bl_idname = "export_scene.b3d"
+    bl_label = "Export B3D"
 
     filename_ext = ".b3d"
+    filter_glob: StringProperty(default="*.b3d", options={"HIDDEN"})
 
-    filter_glob: StringProperty(
-            default="*.b3d",
-            options={'HIDDEN'},
-            )
+    use_local_transform: BoolProperty(
+        name="Use Local Transform",
+        description="Use local transforms with armatures",
+        default=False,
+    )
+
+    export_ambient: BoolProperty(
+        name="Export Ambient Light",
+        description="Export world light color",
+        default=False,
+    )
+
+    enable_mipmaps: BoolProperty(
+        name="Enable Mipmaps",
+        description="Enables the mipmap flag on UV maps",
+        default=False,
+    )
 
     use_selection: BoolProperty(
-            name="Selection Only",
-            description="Export selected objects only",
-            default=False,
-            )
+        name="Selected Objects",
+        description="Export selected and visible objects only",
+        default=True,
+    )
+
+    use_visible: BoolProperty(
+        name="Visible Objects",
+        description="Export visible objects only",
+        default=False
+    )
+
+    use_collection: BoolProperty(
+        name="Active Collection",
+        description="Export only objects from the active collection (and its children)",
+        default=False,
+    )
+
+    object_mesh: BoolProperty(
+        name="Mesh",
+        description="Export meshes",
+        default=True,
+    )
+
+    object_armature: BoolProperty(
+        name="Armature",
+        description="Export armatures",
+        default=True,
+    )
+
+    object_light: BoolProperty(
+        name="Lamp",
+        description="Export lamps",
+        default=False,
+    )
+
+    object_camera: BoolProperty(
+        name="Camera",
+        description="Export cameras (panoramic not supported)",
+        default=False,
+    )
+
+    export_texcoords: BoolProperty(
+        name="UVs",
+        description="Export UVs (texture coordinates) with meshes",
+        default=True,
+    )
+
+    export_materials: BoolProperty(
+        name="Materials",
+        description="Export materials with meshes",
+        default=True,
+    )
+
+    export_normals: BoolProperty(
+        name="Normals",
+        description="Export vertex normals with meshes",
+        default=True,
+    )
+
+    export_colors: BoolProperty(
+        name="Vertex Colors",
+        description="Export vertex colors with meshes",
+        default=False,
+    )
+
+    def draw(self, context):
+        pass
 
     def execute(self, context):
         from . import export_b3d
 
-        keywords = self.as_keywords(ignore=("axis_forward",
-                                            "axis_up",
-                                            "filter_glob",
-                                            "check_existing",
-                                            ))
-        global_matrix = axis_conversion(to_forward=self.axis_forward,
-                                        to_up=self.axis_up,
-                                        ).to_4x4()
-        keywords["global_matrix"] = global_matrix
+        export_settings = {}
 
-        return export_b3d.save(self, context, **keywords)
+        export_settings["use_local_transform"] = self.use_local_transform
+        export_settings["export_ambient"] = self.export_ambient
+        export_settings["enable_mipmaps"] = self.enable_mipmaps
 
+        export_settings["use_selection"] = self.use_selection
+        export_settings["use_visible"] = self.use_visible
+        export_settings["use_collection"] = self.use_collection
+
+        export_settings["export_texcoords"] = self.export_texcoords
+        export_settings["export_materials"] = self.export_materials
+        export_settings["export_normals"] = self.export_normals
+        export_settings["export_colors"] = self.export_colors
+
+        export_settings["object_mesh"] = self.object_mesh
+        export_settings["object_armature"] = self.object_armature
+        export_settings["object_light"] = self.object_light
+        export_settings["object_camera"] = self.object_camera
+
+        return export_b3d.save(self, context, self.filepath, export_settings)
+
+class B3D_PT_export_include(bpy.types.Panel):
+    bl_space_type = "FILE_BROWSER"
+    bl_region_type = "TOOL_PROPS"
+    bl_label = "Include"
+    bl_parent_id = "FILE_PT_operator"
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == "EXPORT_SCENE_OT_b3d"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+
+        operator = context.space_data.active_operator
+
+        sublayout = layout.column(heading="Limit to")
+        sublayout.prop(operator, "use_selection")
+        sublayout.prop(operator, "use_visible")
+        sublayout.prop(operator, "use_collection")
+
+        sublayout = layout.column(heading="Object Types")
+        sublayout.prop(operator, "object_mesh")
+        sublayout.prop(operator, "object_armature")
+        sublayout.prop(operator, "object_light")
+        sublayout.prop(operator, "object_camera")
+
+class B3D_PT_export_mesh(bpy.types.Panel):
+    bl_space_type = "FILE_BROWSER"
+    bl_region_type = "TOOL_PROPS"
+    bl_label = "Mesh"
+    bl_parent_id = "FILE_PT_operator"
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == "EXPORT_SCENE_OT_b3d"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+
+        operator = context.space_data.active_operator
+
+        layout.prop(operator, "export_texcoords")
+        layout.prop(operator, "export_materials")
+        layout.prop(operator, "export_normals")
+        layout.prop(operator, "export_colors")
+
+class B3D_PT_export_other(bpy.types.Panel):
+    bl_space_type = "FILE_BROWSER"
+    bl_region_type = "TOOL_PROPS"
+    bl_label = "Other"
+    bl_parent_id = "FILE_PT_operator"
+    bl_options = {"DEFAULT_CLOSED"}
+
+    @classmethod
+    def poll(cls, context):
+        return context.space_data.active_operator.bl_idname == "EXPORT_SCENE_OT_b3d"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+
+        operator = context.space_data.active_operator
+
+        layout.prop(operator, "use_local_transform")
+        layout.prop(operator, "export_ambient")
+        layout.prop(operator, "enable_mipmaps")
 
 # Add to a menu
 def menu_func_export(self, context):
     self.layout.operator(ExportB3D.bl_idname, text="Blitz3D (.b3d)")
-
 
 def menu_func_import(self, context):
     self.layout.operator(ImportB3D.bl_idname, text="Blitz3D (.b3d)")
@@ -152,13 +308,12 @@ class DebugMacro(bpy.types.Operator):
 
     from . import import_b3d
     from . import export_b3d
+    from . import B3DParser
 
-    filepath: bpy.props.StringProperty(name="filepath", default=import_b3d.filepath)
+    filepath: bpy.props.StringProperty(name="filepath", default=B3DParser.filepath)
 
     def execute(self, context: bpy.context):
         import sys,imp
-
-        print("b3d, loading", self.filepath)
 
         for material in bpy.data.materials:
             bpy.data.materials.remove(material)
@@ -170,7 +325,7 @@ class DebugMacro(bpy.types.Operator):
         imp.reload(module)
 
         import_b3d.load(self, context, filepath=self.filepath)
-        export_b3d.save(self, context, filepath=self.filepath.replace('.b3d','.exported.b3d'))
+        #export_b3d.save(self, context, filepath=self.filepath.replace('.b3d','.exported.b3d'))
 
         """
         bpy.ops.view3d.viewnumpad(type='FRONT', align_active=False)
