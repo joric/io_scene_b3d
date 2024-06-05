@@ -48,5 +48,5 @@ This software is covered by GPL 2.0. Pull requests are welcome.
 
 ## References
 
+* https://github.com/joric/paste_to_ue
 * https://github.com/joric/gnome
-
